@@ -1,0 +1,131 @@
+#include "libnn.h"
+
+int file_exists(const char *filename) {
+  struct stat buffer;
+  return stat(filename, &buffer) == 0 ? 1 : 0;
+}
+
+char *get_file_extension(const char *file_path) {
+  static const char *dot = ".";
+  char *file_extension = strrchr(file_path, *dot);
+
+  if (file_extension && file_extension[0] != '\0') {
+    file_extension++;
+    return file_extension;
+  }
+  return NULL;
+}
+
+unsigned char *read_file(const char *program_name, const char *file_path, size_t *file_size) {
+  unsigned char *buffer;
+  FILE *file = fopen(file_path, "rb");
+  if (file == NULL) {
+    log_event(program_name, ERROR,
+              "read_file failed to open the requested file.", log_to_file);
+    return NULL;
+  }
+  fseek(file, 0, SEEK_END);
+  *file_size = ftell(file);
+  rewind(file);
+
+  buffer = (unsigned char *)malloc(*file_size);
+  if (buffer == NULL) {
+    log_event(program_name, ERROR, "Failed to allocate memory for file buffer.",
+              log_to_file);
+    fclose(file);
+    return NULL;
+  }
+  size_t bytes_read = fread(buffer, 1, *file_size, file);
+  if (bytes_read != *file_size) {
+    log_event(program_name, ERROR, "Error reading file into buffer.",
+              log_to_file);
+    free(buffer);
+    fclose(file);
+    return NULL;
+  }
+  fclose(file);
+  return buffer;
+}
+
+char *prepend_program_data_path(const char *program_name, char *original_path) {
+  const char *home = getenv("HOME");
+  if (!home) {
+    log_event(program_name, ERROR,
+              "Failed to get value of HOME environment variable.", log_to_file);
+    return NULL;
+  }
+  char *path = malloc(4096);
+  if (!path) {
+    log_event(program_name, ERROR,
+              "Failed to allocate memory for constructing file path.",
+              log_to_file);
+    return NULL;
+  }
+  snprintf(path, 4096, "%s/.local/share/%s/%s", home, program_name,
+           original_path);
+  return path;
+}
+
+int log_event(const char *program_name, int log_level, const char *msg,
+              int log_to_file) {
+  if (!msg) {
+    fprintf(stderr, "NULL log message.\n");
+    return 0;
+  }
+  if (msg[0] == '\0') {
+    fprintf(stderr, "Empty log message.\n");
+    return 0;
+  }
+
+  char *log_level_msg;
+  switch (log_level) {
+  case DEBUG:
+    log_level_msg = "DEBUG";
+    break;
+  case INFO:
+    log_level_msg = "INFO";
+    break;
+  case WARN:
+    log_level_msg = "WARN";
+    break;
+  case ERROR:
+    log_level_msg = "ERROR";
+    break;
+  case FATAL:
+    log_level_msg = "FATAL";
+    break;
+  default:
+    fprintf(stderr, "Invalid log level supplied.\n");
+    return 0;
+  }
+
+  time_t t = time(NULL);
+  struct tm tm = *localtime(&t);
+  char formatted_msg[256];
+  snprintf(formatted_msg, 256, "[%d/%02d/%02d %02d:%02d:%02d] %s  %s\n",
+           tm.tm_mon + 1, tm.tm_mday, tm.tm_year + 1900, tm.tm_hour, tm.tm_min,
+           tm.tm_sec, log_level_msg, msg);
+
+  if (log_level > 1) {
+    fprintf(stderr, "%s", formatted_msg);
+  } else {
+    printf("%s", formatted_msg);
+  }
+
+  if (log_to_file) {
+    char log_filename[128];
+    snprintf(log_filename, 128, "log_%d%02d%02d.txt", tm.tm_year + 1900,
+             tm.tm_mon + 1, tm.tm_mday);
+    prepend_program_data_path(program_name, log_filename);
+    FILE *file = fopen(log_filename, "a+");
+    if (file == NULL) {
+      fprintf(stderr, "Failed to open log file.");
+      return 0;
+    }
+
+    fprintf(file, "%s", formatted_msg);
+    fclose(file);
+  }
+
+  return 1;
+}
