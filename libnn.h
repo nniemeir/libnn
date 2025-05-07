@@ -10,6 +10,8 @@
 
 extern int log_to_file;
 
+extern const char *program_name;
+
 // File Operations
 int file_exists(const char *filename);
 char *get_file_extension(const char *file_path);
@@ -22,6 +24,7 @@ int log_event(const char *program_name, int log_level, const char *msg,
               int log_to_file);
 
 // String Operations
-char *prepend_program_data_path(const char *program_name, char *original_path);
+int prepend_program_data_path(const char *program_name, char **path_buffer,
+                              char *original_path);
 
 #endif

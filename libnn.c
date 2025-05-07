@@ -6,8 +6,7 @@ int file_exists(const char *filename) {
 }
 
 char *get_file_extension(const char *file_path) {
-  static const char *dot = ".";
-  char *file_extension = strrchr(file_path, *dot);
+  char *file_extension = strrchr(file_path, '.');
 
   if (file_extension && file_extension[0] != '\0') {
     file_extension++;
@@ -16,18 +15,33 @@ char *get_file_extension(const char *file_path) {
   return NULL;
 }
 
-unsigned char *read_file(const char *program_name, const char *file_path, size_t *file_size) {
-  unsigned char *buffer;
+unsigned char *read_file(const char *program_name, const char *file_path,
+                         size_t *file_size) {
+
   FILE *file = fopen(file_path, "rb");
   if (file == NULL) {
     log_event(program_name, ERROR,
               "read_file failed to open the requested file.", log_to_file);
     return NULL;
   }
-  fseek(file, 0, SEEK_END);
-  *file_size = ftell(file);
+
+  if (fseek(file, 0, SEEK_END) == -1) {
+    log_event(program_name, ERROR, "fseek failed.", log_to_file);
+    fclose(file);
+    return NULL;
+  }
+
+  long size = ftell(file);
+  if (size == -1) {
+    log_event(program_name, ERROR, "ftell failed.", log_to_file);
+    fclose(file);
+    return NULL;
+  }
+  *file_size = (size_t)size;
+
   rewind(file);
 
+  unsigned char *buffer;
   buffer = (unsigned char *)malloc(*file_size);
   if (buffer == NULL) {
     log_event(program_name, ERROR, "Failed to allocate memory for file buffer.",
@@ -47,23 +61,17 @@ unsigned char *read_file(const char *program_name, const char *file_path, size_t
   return buffer;
 }
 
-char *prepend_program_data_path(const char *program_name, char *original_path) {
+int prepend_program_data_path(const char *program_name, char **path_buffer,
+                              char *original_path) {
   const char *home = getenv("HOME");
   if (!home) {
     log_event(program_name, ERROR,
               "Failed to get value of HOME environment variable.", log_to_file);
-    return NULL;
+    return 0;
   }
-  char *path = malloc(4096);
-  if (!path) {
-    log_event(program_name, ERROR,
-              "Failed to allocate memory for constructing file path.",
-              log_to_file);
-    return NULL;
-  }
-  snprintf(path, 4096, "%s/.local/share/%s/%s", home, program_name,
+  snprintf(*path_buffer, 4096, "%s/.local/share/%s/%s", home, program_name,
            original_path);
-  return path;
+  return 1;
 }
 
 int log_event(const char *program_name, int log_level, const char *msg,
@@ -116,15 +124,22 @@ int log_event(const char *program_name, int log_level, const char *msg,
     char log_filename[128];
     snprintf(log_filename, 128, "log_%d%02d%02d.txt", tm.tm_year + 1900,
              tm.tm_mon + 1, tm.tm_mday);
-    prepend_program_data_path(program_name, log_filename);
+    char *path_buffer = malloc(4096);
+    if (!path_buffer) {
+      fprintf(stderr, "Failed to allocate memory for path_buffer.\n");
+      return 0;
+    }
+    prepend_program_data_path(program_name, &path_buffer, log_filename);
     FILE *file = fopen(log_filename, "a+");
     if (file == NULL) {
-      fprintf(stderr, "Failed to open log file.");
+      fprintf(stderr, "Failed to open log file.\n");
+      free(path_buffer);
       return 0;
     }
 
     fprintf(file, "%s", formatted_msg);
     fclose(file);
+    free(path_buffer);
   }
 
   return 1;
