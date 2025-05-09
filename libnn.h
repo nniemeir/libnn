@@ -1,5 +1,6 @@
 #ifndef LIBNN_H
 #define LIBNN_H
+#include <linux/limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,6 +8,7 @@
 #include <time.h>
 
 #define NULL_TERMINATOR_LENGTH 1
+#define LOG_MAX 1024
 
 extern int log_to_file;
 

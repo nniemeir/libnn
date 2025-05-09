@@ -69,7 +69,7 @@ int prepend_program_data_path(const char *program_name, char **path_buffer,
               "Failed to get value of HOME environment variable.", log_to_file);
     return 0;
   }
-  snprintf(*path_buffer, 4096, "%s/.local/share/%s/%s", home, program_name,
+  snprintf(*path_buffer, PATH_MAX, "%s/.local/share/%s/%s", home, program_name,
            original_path);
   return 1;
 }
@@ -109,8 +109,8 @@ int log_event(const char *program_name, int log_level, const char *msg,
 
   time_t t = time(NULL);
   struct tm tm = *localtime(&t);
-  char formatted_msg[256];
-  snprintf(formatted_msg, 256, "[%d/%02d/%02d %02d:%02d:%02d] %s  %s\n",
+  char formatted_msg[LOG_MAX];
+  snprintf(formatted_msg, LOG_MAX, "[%d/%02d/%02d %02d:%02d:%02d] %s  %s\n",
            tm.tm_mon + 1, tm.tm_mday, tm.tm_year + 1900, tm.tm_hour, tm.tm_min,
            tm.tm_sec, log_level_msg, msg);
 
@@ -121,10 +121,10 @@ int log_event(const char *program_name, int log_level, const char *msg,
   }
 
   if (log_to_file) {
-    char log_filename[128];
-    snprintf(log_filename, 128, "log_%d%02d%02d.txt", tm.tm_year + 1900,
+    char log_filename[NAME_MAX];
+    snprintf(log_filename, NAME_MAX, "log_%d%02d%02d.txt", tm.tm_year + 1900,
              tm.tm_mon + 1, tm.tm_mday);
-    char *path_buffer = malloc(4096);
+    char *path_buffer = malloc(PATH_MAX);
     if (!path_buffer) {
       fprintf(stderr, "Failed to allocate memory for path_buffer.\n");
       return 0;
