@@ -1,5 +1,4 @@
 #include "libnn.h"
-#include <linux/limits.h>
 
 int file_exists(const char *filename) {
   struct stat buffer;
