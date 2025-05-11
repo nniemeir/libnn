@@ -1,4 +1,5 @@
 #include "libnn.h"
+#include <linux/limits.h>
 
 int file_exists(const char *filename) {
   struct stat buffer;
@@ -17,7 +18,6 @@ char *get_file_extension(const char *file_path) {
 
 unsigned char *read_file(const char *program_name, const char *file_path,
                          size_t *file_size) {
-
   FILE *file = fopen(file_path, "rb");
   if (file == NULL) {
     log_event(program_name, ERROR,
@@ -71,6 +71,17 @@ int prepend_program_data_path(const char *program_name, char **path_buffer,
   }
   snprintf(*path_buffer, PATH_MAX, "%s/.local/share/%s/%s", home, program_name,
            original_path);
+  return 1;
+}
+
+int construct_log_path(const char *program_name, char **path_buffer) {
+  const char *home = getenv("HOME");
+  if (!home) {
+    log_event(program_name, ERROR,
+              "Failed to get value of HOME environment variable.", log_to_file);
+    return 0;
+  }
+  snprintf(*path_buffer, PATH_MAX, "%s/.local/state/%s", home, program_name);
   return 1;
 }
 
@@ -129,8 +140,19 @@ int log_event(const char *program_name, int log_level, const char *msg,
       fprintf(stderr, "Failed to allocate memory for path_buffer.\n");
       return 0;
     }
-    prepend_program_data_path(program_name, &path_buffer, log_filename);
-    FILE *file = fopen(log_filename, "a+");
+    construct_log_path(program_name, &path_buffer);
+    char *log_path = malloc(PATH_MAX);
+    if (!log_path) {
+      fprintf(stderr, "Failed to allocate memory for path_buffer.\n");
+      return 0;
+    }
+
+    if (!file_exists(path_buffer)) {
+      mkdir(path_buffer, 0700);
+    }
+
+    snprintf(log_path, PATH_MAX, "%s/%s", path_buffer, log_filename);
+    FILE *file = fopen(log_path, "a+");
     if (file == NULL) {
       fprintf(stderr, "Failed to open log file.\n");
       free(path_buffer);
