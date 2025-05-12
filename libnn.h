@@ -14,6 +14,10 @@ extern int log_to_file;
 
 extern const char *program_name;
 
+extern const char *malloc_err;
+
+extern const char *prepend_err;
+
 // File Operations
 int file_exists(const char *filename);
 char *get_file_extension(const char *file_path);

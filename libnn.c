@@ -1,4 +1,10 @@
 #include "libnn.h"
+<<<<<<< HEAD
+
+const char *malloc_err = "Failed to allocate memory.";
+const char *prepend_err = "Failed to prepend program data path to string.";
+=======
+>>>>>>> e5221cecd94886c4f7861a544215a66517171fb6
 
 int file_exists(const char *filename) {
   struct stat buffer;
@@ -7,18 +13,17 @@ int file_exists(const char *filename) {
 
 char *get_file_extension(const char *file_path) {
   char *file_extension = strrchr(file_path, '.');
-
-  if (file_extension && file_extension[0] != '\0') {
-    file_extension++;
-    return file_extension;
+  if (!file_extension) {
+    return NULL;
   }
-  return NULL;
+  file_extension++;
+  return file_extension;
 }
 
 unsigned char *read_file(const char *program_name, const char *file_path,
                          size_t *file_size) {
   FILE *file = fopen(file_path, "rb");
-  if (file == NULL) {
+  if (!file) {
     log_event(program_name, ERROR,
               "read_file failed to open the requested file.", log_to_file);
     return NULL;
@@ -42,7 +47,7 @@ unsigned char *read_file(const char *program_name, const char *file_path,
 
   unsigned char *buffer;
   buffer = (unsigned char *)malloc(*file_size);
-  if (buffer == NULL) {
+  if (!buffer) {
     log_event(program_name, ERROR, "Failed to allocate memory for file buffer.",
               log_to_file);
     fclose(file);
@@ -68,6 +73,12 @@ int prepend_program_data_path(const char *program_name, char **path_buffer,
               "Failed to get value of HOME environment variable.", log_to_file);
     return 0;
   }
+  if (!*path_buffer) {
+    log_event(program_name, ERROR,
+              "NULL pointer was passed to prepend_program_data_path.",
+              log_to_file);
+    return 0;
+  }
   snprintf(*path_buffer, PATH_MAX, "%s/.local/share/%s/%s", home, program_name,
            original_path);
   return 1;
@@ -78,6 +89,11 @@ int construct_log_path(const char *program_name, char **path_buffer) {
   if (!home) {
     log_event(program_name, ERROR,
               "Failed to get value of HOME environment variable.", log_to_file);
+    return 0;
+  }
+  if (!*path_buffer) {
+    log_event(program_name, ERROR,
+              "NULL pointer was passed to construct_log_path.", log_to_file);
     return 0;
   }
   snprintf(*path_buffer, PATH_MAX, "%s/.local/state/%s", home, program_name);
@@ -139,20 +155,30 @@ int log_event(const char *program_name, int log_level, const char *msg,
       fprintf(stderr, "Failed to allocate memory for path_buffer.\n");
       return 0;
     }
-    construct_log_path(program_name, &path_buffer);
+
+    if (!construct_log_path(program_name, &path_buffer)) {
+      free(path_buffer);
+      return 0;
+    }
+
     char *log_path = malloc(PATH_MAX);
     if (!log_path) {
-      fprintf(stderr, "Failed to allocate memory for path_buffer.\n");
+      fprintf(stderr, "Failed to allocate memory for log_path.\n");
+      free(path_buffer);
       return 0;
     }
 
     if (!file_exists(path_buffer)) {
-      mkdir(path_buffer, 0700);
+      if (mkdir(path_buffer, 0700) == -1) {
+        fprintf(stderr, "Failed to make log directory.\n");
+        free(path_buffer);
+        return 0;
+      }
     }
 
     snprintf(log_path, PATH_MAX, "%s/%s", path_buffer, log_filename);
     FILE *file = fopen(log_path, "a+");
-    if (file == NULL) {
+    if (!file) {
       fprintf(stderr, "Failed to open log file.\n");
       free(path_buffer);
       return 0;
