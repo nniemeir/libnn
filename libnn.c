@@ -1,10 +1,7 @@
 #include "libnn.h"
-<<<<<<< HEAD
 
 const char *malloc_err = "Failed to allocate memory.";
 const char *prepend_err = "Failed to prepend program data path to string.";
-=======
->>>>>>> e5221cecd94886c4f7861a544215a66517171fb6
 
 int file_exists(const char *filename) {
   struct stat buffer;
