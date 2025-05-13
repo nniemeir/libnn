@@ -50,7 +50,7 @@ unsigned char *read_file(const char *program_name, const char *file_path,
     fclose(file);
     return NULL;
   }
-  size_t bytes_read = fread(buffer, 1, *file_size, file);
+  const size_t bytes_read = fread(buffer, 1, *file_size, file);
   if (bytes_read != *file_size) {
     log_event(program_name, ERROR, "Error reading file into buffer.",
               log_to_file);
@@ -63,7 +63,7 @@ unsigned char *read_file(const char *program_name, const char *file_path,
 }
 
 int prepend_program_data_path(const char *program_name, char **path_buffer,
-                              char *original_path) {
+                              const char *original_path) {
   const char *home = getenv("HOME");
   if (!home) {
     log_event(program_name, ERROR,
@@ -97,15 +97,15 @@ int construct_log_path(const char *program_name, char **path_buffer) {
   return 1;
 }
 
-int log_event(const char *program_name, int log_level, const char *msg,
-              int log_to_file) {
+void log_event(const char *program_name, int log_level, const char *msg,
+               int log_to_file) {
   if (!msg) {
     fprintf(stderr, "NULL log message.\n");
-    return 0;
+    return;
   }
   if (msg[0] == '\0') {
     fprintf(stderr, "Empty log message.\n");
-    return 0;
+    return;
   }
 
   char *log_level_msg;
@@ -127,10 +127,10 @@ int log_event(const char *program_name, int log_level, const char *msg,
     break;
   default:
     fprintf(stderr, "Invalid log level supplied.\n");
-    return 0;
+    return;
   }
 
-  time_t t = time(NULL);
+  const time_t t = time(NULL);
   struct tm tm = *localtime(&t);
   char formatted_msg[LOG_MAX];
   snprintf(formatted_msg, LOG_MAX, "[%d/%02d/%02d %02d:%02d:%02d] %s  %s\n",
@@ -150,26 +150,26 @@ int log_event(const char *program_name, int log_level, const char *msg,
     char *path_buffer = malloc(PATH_MAX);
     if (!path_buffer) {
       fprintf(stderr, "Failed to allocate memory for path_buffer.\n");
-      return 0;
+      return;
     }
 
     if (!construct_log_path(program_name, &path_buffer)) {
       free(path_buffer);
-      return 0;
+      return;
     }
 
     char *log_path = malloc(PATH_MAX);
     if (!log_path) {
       fprintf(stderr, "Failed to allocate memory for log_path.\n");
       free(path_buffer);
-      return 0;
+      return;
     }
 
     if (!file_exists(path_buffer)) {
       if (mkdir(path_buffer, 0700) == -1) {
         fprintf(stderr, "Failed to make log directory.\n");
         free(path_buffer);
-        return 0;
+        return;
       }
     }
 
@@ -178,13 +178,11 @@ int log_event(const char *program_name, int log_level, const char *msg,
     if (!file) {
       fprintf(stderr, "Failed to open log file.\n");
       free(path_buffer);
-      return 0;
+      return;
     }
 
     fprintf(file, "%s", formatted_msg);
     fclose(file);
     free(path_buffer);
   }
-
-  return 1;
 }

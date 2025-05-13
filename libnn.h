@@ -26,11 +26,11 @@ unsigned char *read_file(const char *program_name, const char *file_path,
 
 // Logging
 enum levels { DEBUG, INFO, WARN, ERROR, FATAL };
-int log_event(const char *program_name, int log_level, const char *msg,
-              int log_to_file);
+void log_event(const char *program_name, int log_level, const char *msg,
+               int log_to_file);
 
 // String Operations
 int prepend_program_data_path(const char *program_name, char **path_buffer,
-                              char *original_path);
+                              const char *original_path);
 
 #endif
