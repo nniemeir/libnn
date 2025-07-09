@@ -12,6 +12,7 @@
 #define LOG_MAX 1024
 
 extern const char *program_name;
+extern const char *prepend_err;
 extern int log_to_file;
 
 // File Operations

@@ -1,5 +1,7 @@
 #include "libnn.h"
 
+const char *prepend_err = "Failed to prepend program data path to filename";
+
 int file_exists(const char *filename) {
   struct stat buffer;
   int result = stat(filename, &buffer);
